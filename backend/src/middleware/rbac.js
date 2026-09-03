@@ -98,7 +98,7 @@ export function requireMinRole(minRole) {
  * Check if user can access a case (department match or role override)
  */
 export async function requireCaseAccess(req, res, next) {
-  const caseId = req.params.caseId || req.body.caseId || req.query.caseId;
+  const caseId = req.params.caseId || req.params.id || req.body.caseId || req.query.caseId;
   if (!caseId) {
     return res.status(400).json({ error: 'Case ID required' });
   }

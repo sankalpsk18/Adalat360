@@ -23,7 +23,7 @@ export async function calculatePriorityScore(caseId) {
         select: { severity: true },
       },
       exhibits: {
-        select: { custodyStatus: true },
+        select: { status: true },
       },
     },
   });

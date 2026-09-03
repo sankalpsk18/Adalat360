@@ -246,7 +246,7 @@ router.post(
               description: `RAG-detected ${conflict.type} conflict: ${conflict.values.join(' vs ')}`,
               severity: 'MEDIUM',
             },
-          }).catch(() => {}); // Ignore duplicate errors
+          }).catch(() => { }); // Ignore duplicate errors
         }
       }
 
@@ -260,7 +260,7 @@ router.post(
             userId: req.user.id,
             expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 min TTL
           },
-        }).catch(() => {}); // Ignore duplicate cache errors
+        }).catch(() => { }); // Ignore duplicate cache errors
       }
 
       res.json({

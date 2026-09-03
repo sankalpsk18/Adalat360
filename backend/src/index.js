@@ -21,8 +21,8 @@ import auditRoutes from './routes/audit.js';
 import signatureRoutes from './routes/signatures.js';
 import certificateRoutes from './routes/certificates.js';
 import redactionRoutes from './routes/redactions.js';
-import ragRoutes from './routes/rag.js';
-import systemRoutes from './routes/system.js';
+// import ragRoutes from './routes/rag.js';
+// import systemRoutes from './routes/system.js';
 
 export const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
@@ -76,8 +76,8 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/signatures', signatureRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/redactions', redactionRoutes);
-app.use('/api/rag', ragRoutes);
-app.use('/api/system', systemRoutes);
+// app.use('/api/rag', ragRoutes);
+// app.use('/api/system', systemRoutes);
 
 // 404 handler
 app.use((req, res) => {

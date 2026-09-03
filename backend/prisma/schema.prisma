@@ -109,7 +109,6 @@ model Document {
   redactions        Redaction[]
   certificates      Certificate[]
   exhibits          ExhibitEntry[]
-  approvalRequests  ApprovalRequest[]
   ragChunks         RagChunk[]
 
   @@index([caseId])
@@ -273,7 +272,6 @@ model ApprovalRequest {
   reviewer        User?    @relation("ApprovalReviewer", fields: [decidedBy], references: [id])
   case            Case?    @relation(fields: [caseId], references: [id])
   caseId          String?
-  document        Document? @relation(fields: [resourceId], references: [id])
 
   @@index([resourceType, resourceId])
   @@index([approverRole, status])
