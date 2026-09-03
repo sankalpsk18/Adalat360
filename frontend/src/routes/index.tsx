@@ -153,7 +153,8 @@ function LoginPage() {
                       {r.label}
                     </SelectItem>
                   ))}
-                </SelectContent              />
+                </SelectContent>
+              </Select>
               <p className="mt-1.5 text-[11px] text-muted-foreground">
                 {ROLES.find((r) => r.id === role)!.access}
               </p>

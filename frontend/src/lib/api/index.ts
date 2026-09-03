@@ -18,6 +18,7 @@ import {
   setAuthToken,
   clearAuthToken,
 } from './client';
+import { useQuery } from '@tanstack/react-query';
 
 // Re-export types for components
 export * from './types';
@@ -27,6 +28,51 @@ export { ROLES, roleMeta, DEMO_IDENTITY, CONFLICTS } from './seed';
 
 // Role type from types
 export type { Role } from './types';
+
+// ============================================
+// TANSTACK QUERY HOOKS
+// ============================================
+
+export function useCases(role: Role) {
+  return useQuery({
+    queryKey: ['cases', role],
+    queryFn: () => listCases(role),
+    staleTime: 30000,
+  });
+}
+
+export function useCase(id: string) {
+  return useQuery({
+    queryKey: ['case', id],
+    queryFn: () => getCase(id),
+    enabled: !!id,
+    staleTime: 30000,
+  });
+}
+
+export function useApprovals() {
+  return useQuery({
+    queryKey: ['approvals'],
+    queryFn: listApprovals,
+    staleTime: 30000,
+  });
+}
+
+export function useDocuments(caseId?: string, role?: Role) {
+  return useQuery({
+    queryKey: ['documents', caseId, role],
+    queryFn: () => listDocuments(caseId, role),
+    staleTime: 30000,
+  });
+}
+
+export function useAudit() {
+  return useQuery({
+    queryKey: ['audit'],
+    queryFn: listAudit,
+    staleTime: 30000,
+  });
+}
 
 // ============================================
 // CASES - Connect to real backend

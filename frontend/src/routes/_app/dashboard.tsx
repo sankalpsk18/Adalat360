@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AlertTriangle, FileSignature, FolderOpen, ShieldAlert } from "lucide-react";
 import { useSession } from "@/lib/session";
-import { fmtDate, listApprovals, listAudit, listCases, listDocuments, roleMeta } from "@/lib/api";
+import { fmtDate, roleMeta, useCases, useApprovals, useDocuments, useAudit } from "@/lib/api";
 import { IntegrityBadge, PageHeader, RoleBadge, SectionCard } from "@/components/primitives";
 import { Badge } from "@/components/ui/badge";
 
@@ -17,17 +17,28 @@ const statusLabel: Record<string, string> = {
 
 function Dashboard() {
   const { role, name } = useSession();
-  const cases = listCases(role);
-  const approvals = listApprovals().filter((a) => a.status === "pending");
-  const docs = listDocuments(undefined, role);
+
+  const { data: cases = [], isLoading: casesLoading } = useCases(role);
+  const { data: approvals = [], isLoading: approvalsLoading } = useApprovals();
+  const { data: docs = [], isLoading: docsLoading } = useDocuments(undefined, role);
+  const { data: activity = [], isLoading: activityLoading } = useAudit();
+
+  const pendingApprovals = approvals.filter((a) => a.status === "pending");
   const alerts = docs.filter((d) => d.integrity === "mismatch");
-  const activity = listAudit().slice(0, 6);
 
   const stats = [
     { label: "Active cases", value: cases.length, icon: FolderOpen },
-    { label: "Pending signatures / approvals", value: approvals.filter((a) => a.kind !== "case_update").length, icon: FileSignature },
-    { label: "Integrity alerts", value: alerts.length + approvals.filter((a) => a.kind === "integrity_alert").length, icon: ShieldAlert },
+    { label: "Pending signatures / approvals", value: pendingApprovals.filter((a) => a.kind !== "case_update").length, icon: FileSignature },
+    { label: "Integrity alerts", value: alerts.length + pendingApprovals.filter((a) => a.kind === "integrity_alert").length, icon: ShieldAlert },
   ];
+
+  if (casesLoading || approvalsLoading || docsLoading || activityLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -108,7 +119,7 @@ function Dashboard() {
           }
         >
           <ul className="space-y-2">
-            {approvals.slice(0, 5).map((a) => (
+            {pendingApprovals.slice(0, 5).map((a) => (
               <li key={a.id} className="rounded-md border border-border p-2">
                 <div className="flex items-start gap-2">
                   {a.severity === "critical" && <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-mismatch" />}
