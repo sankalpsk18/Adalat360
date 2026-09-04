@@ -1,73 +1,54 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Landmark, Lock, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
-import { ROLES, type Role } from '@/lib/api';
-import { useSession } from '@/lib/session';
+import { useAuth, ROLES, type Role } from '@/lib';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DemoDataBadge } from '@/components/primitives';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 
 export const Route = createFileRoute('/')({
   head: () => ({
     meta: [
       { title: 'Sign in — ADALAT360 Evidence & Records' },
-      {
-        name: 'description',
-        content: 'Secure role-based sign-in for the ADALAT360 digital document and evidence management prototype.',
-      },
+      { name: 'description', content: 'Secure role-based sign-in for the ADALAT360 digital document and evidence management prototype.' },
       { property: 'og:title', content: 'Sign in — ADALAT360 Evidence & Records' },
-      {
-        property: 'og:description',
-        content: 'Role-based access to hash-chained case records, custody ledgers and conflict-aware search.',
-      },
+      { property: 'og:description', content: 'Role-based access to hash-chained case records, custody ledgers and conflict-aware search.' },
     ],
   }),
   component: LoginPage,
 });
 
 function LoginPage() {
-  const { signIn } = useSession();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [role, setRole] = useState<Role>('investigating_officer');
-  const [serviceBarId, setServiceBarId] = useState('IO-CB-2026-001');
-  const [passphrase, setPassphrase] = useState('demo123');
+  const [serviceBarId, setServiceBarId] = useState('');
+  const [passphrase, setPassphrase] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  // Demo credentials mapping
-  const demoCredentials: Record<Role, { serviceBarId: string; passphrase: string }> = {
-    investigating_officer: { serviceBarId: 'IO-CB-2026-001', passphrase: 'demo123' },
-    records_section: { serviceBarId: 'REC-RS-2026-001', passphrase: 'demo123' },
-    forensic_analyst: { serviceBarId: 'FSL-RFSL-2026-001', passphrase: 'demo123' },
-    prosecutor: { serviceBarId: 'PP-LC-2026-001', passphrase: 'demo123' },
-    judge: { serviceBarId: 'CRT-DC-2026-001', passphrase: 'demo123' },
-    system_admin: { serviceBarId: 'SYS-IT-2026-001', passphrase: 'demo123' },
-  };
 
   const handleRoleChange = (newRole: Role) => {
     setRole(newRole);
-    const creds = demoCredentials[newRole];
-    if (creds) {
-      setServiceBarId(creds.serviceBarId);
-      setPassphrase(creds.passphrase);
-    }
+    setServiceBarId('');
+    setPassphrase('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    console.log('[Login] Submitting login for:', serviceBarId, role);
 
     try {
-      await signIn(role, serviceBarId, passphrase);
-      console.log('[Login] signIn completed, navigating to /dashboard');
+      await login(role, serviceBarId, passphrase);
       toast.success(`Signed in as ${ROLES.find(r => r.id === role)?.label}`);
       navigate({ to: '/dashboard' });
-      console.log('[Login] Navigation triggered');
     } catch (error: any) {
-      console.error('[Login] Error:', error);
       toast.error(error.message || 'Sign in failed');
     } finally {
       setIsLoading(false);
@@ -88,10 +69,6 @@ function LoginPage() {
           <ul className="mt-6 space-y-3 text-sm opacity-80">
             <li className="flex gap-2">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" />
-              Every record carries a SHA-256 hash and a hash-chained custody trail.
-            </li>
-            <li className="flex gap-2">
-              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" />
               Nothing is overwritten — every edit becomes a new, diffable version.
             </li>
             <li className="flex gap-2">
@@ -100,42 +77,34 @@ function LoginPage() {
             </li>
           </ul>
         </div>
-        <p className="data-mono text-[11px] opacity-50">
+        <p className="font-mono text-[11px] opacity-50">
           SIH26190 · Blockchain & Cybersecurity · design prototype
         </p>
       </div>
 
       <div className="flex items-center justify-center p-6">
-        <form
-          className="w-full max-w-sm"
-          onSubmit={handleSubmit}
-        >
+        <form className="w-full max-w-sm" onSubmit={handleSubmit}>
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold tracking-tight">Officer sign-in</h2>
               <p className="mt-1 text-sm text-muted-foreground">Access-controlled system. Activity is logged.</p>
             </div>
-            <DemoDataBadge />
           </div>
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="svc" className="text-xs">
-                Service / Bar ID
-              </Label>
+              <Label htmlFor="svc" className="text-xs">Service / Bar ID</Label>
               <Input
                 id="svc"
                 value={serviceBarId}
                 onChange={(e) => setServiceBarId(e.target.value)}
-                className="data-mono mt-1"
+                className="font-mono mt-1"
                 autoComplete="off"
                 disabled={isLoading}
               />
             </div>
             <div>
-              <Label htmlFor="pwd" className="text-xs">
-                Passphrase
-              </Label>
+              <Label htmlFor="pwd" className="text-xs">Password</Label>
               <Input
                 id="pwd"
                 type="password"

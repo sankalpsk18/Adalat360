@@ -38,9 +38,6 @@ router.post(
             include: { actor: { select: { name: true, role: true } } },
             take: 20,
           },
-          signatures: {
-            include: { user: { select: { name: true, role: true } } },
-          },
         },
       });
 
@@ -103,7 +100,7 @@ router.post(
  * GET /api/certificates/:id
  * Get certificate details
  */
-router.get('/:id', authenticate, async (req, res, next) => {
+const getCertificate = async (req, res, next) => {
   try {
     const certificate = await prisma.certificate.findUnique({
       where: { id: req.params.id },
@@ -111,9 +108,6 @@ router.get('/:id', authenticate, async (req, res, next) => {
         document: { select: { id: true, filename: true, sha256Hash: true, docType: true } },
         case: { select: { id: true, caseNumber: true, title: true } },
         generator: { select: { id: true, name: true, role: true, serviceBarId: true } },
-        signatures: {
-          include: { user: { select: { name: true, role: true } } },
-        },
       },
     });
 
@@ -130,7 +124,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
 /**
  * GET /api/certificates/document/:id
@@ -143,9 +137,6 @@ router.get('/document/:id', authenticate, requireDocumentAccess, async (req, res
       orderBy: { issuedAt: 'desc' },
       include: {
         generator: { select: { name: true, role: true } },
-        signatures: {
-          include: { user: { select: { name: true, role: true } } },
-        },
       },
     });
 
@@ -154,6 +145,8 @@ router.get('/document/:id', authenticate, requireDocumentAccess, async (req, res
     next(error);
   }
 });
+
+router.get('/:id', authenticate, getCertificate);
 
 /**
  * POST /api/certificates/:id/regenerate

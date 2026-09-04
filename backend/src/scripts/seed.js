@@ -5,11 +5,12 @@
 
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { fileURLToPath } from 'node:url';
 import { generateKeyPair, encryptPrivateKey, sha256 } from '../utils/crypto.js';
 
 const prisma = new PrismaClient();
 
-async function seedDemoData() {
+export async function seedDemoData() {
   console.log('🌱 Seeding ADALAT360 demo data...');
 
   // Clean existing data (in order of dependencies)
@@ -563,4 +564,6 @@ async function main() {
   }
 }
 
-main();
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main();
+}

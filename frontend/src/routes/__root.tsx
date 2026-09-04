@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { AuthProvider } from "../lib/auth";
 import { SessionProvider } from "../lib/session";
 import { Toaster } from "../components/ui/sonner";
 
@@ -107,7 +108,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      {
+        rel: "icon",
+        href: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d1b2a'/%3E%3Cpath d='M18 48L32 14l14 34h-8l-2.6-6.5h-6.8L26 48h-8zm9.3-13.5h9.4L32 23.8l-4.7 10.7z' fill='%23f8fafc'/%3E%3C/svg%3E",
+        type: "image/svg+xml",
+      },
     ],
 
   }),
@@ -136,12 +141,13 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
-        <Toaster />
-      </SessionProvider>
+      <AuthProvider>
+        <SessionProvider>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+          <Toaster />
+        </SessionProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
-

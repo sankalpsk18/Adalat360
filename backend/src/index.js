@@ -21,8 +21,9 @@ import auditRoutes from './routes/audit.js';
 import signatureRoutes from './routes/signatures.js';
 import certificateRoutes from './routes/certificates.js';
 import redactionRoutes from './routes/redactions.js';
-// import ragRoutes from './routes/rag.js';
-// import systemRoutes from './routes/system.js';
+import ragRoutes from './routes/rag.js';
+import systemRoutes from './routes/system.js';
+import { assertEncryptionConfiguration } from './utils/crypto.js';
 
 export const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
@@ -30,6 +31,10 @@ export const prisma = new PrismaClient({
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+if (process.env.NODE_ENV === 'production') {
+  assertEncryptionConfiguration();
+}
 
 // Security middleware
 app.use(helmet({
@@ -39,7 +44,21 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'http://localhost:5173',
+      'http://localhost:8080',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:8080',
+    ].filter(Boolean);
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS origin not allowed: ${origin}`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -76,8 +95,8 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/signatures', signatureRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/redactions', redactionRoutes);
-// app.use('/api/rag', ragRoutes);
-// app.use('/api/system', systemRoutes);
+app.use('/api/rag', ragRoutes);
+app.use('/api/system', systemRoutes);
 
 // 404 handler
 app.use((req, res) => {

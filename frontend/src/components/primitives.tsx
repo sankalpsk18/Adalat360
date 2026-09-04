@@ -43,7 +43,8 @@ const integrityMap: Record<IntegrityState, { label: string; cls: string; Icon: t
 };
 
 export function IntegrityBadge({ state, className }: { state: IntegrityState; className?: string }) {
-  const { label, cls, Icon } = integrityMap[state];
+  const normalizedState = String(state).toLowerCase() as IntegrityState;
+  const { label, cls, Icon } = integrityMap[normalizedState] || integrityMap.pending;
   return (
     <span
       className={cn(

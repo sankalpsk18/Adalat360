@@ -1,12 +1,21 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AppShell } from "@/components/app-shell";
+import { SessionProvider } from "@/lib/session";
 import { useSession } from "@/lib/session";
 
 export const Route = createFileRoute("/_app")({
   ssr: false,
-  component: AppLayout,
+  component: AppLayoutWithSession,
 });
+
+function AppLayoutWithSession() {
+  return (
+    <SessionProvider>
+      <AppLayout />
+    </SessionProvider>
+  );
+}
 
 function AppLayout() {
   const { signedIn } = useSession();

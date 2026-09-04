@@ -12,7 +12,7 @@ import express from 'express';
 import { z } from 'zod';
 import OpenAI from 'openai';
 import { prisma } from '../index.js';
-import { authenticate, requireCaseAccess, auditLog } from '../middleware/rbac.js';
+import { authenticate, requireCaseAccess, requireRole, auditLog } from '../middleware/rbac.js';
 import { searchCase } from '../services/embeddings.js';
 import { callWithLimit, getUsageStats } from '../utils/llmLimiter.js';
 import { sha256 } from '../utils/crypto.js';
@@ -197,21 +197,30 @@ router.post(
       const prompt = buildPrompt(question, chunks, conflicts);
 
       // Call LLM with rate limiting
-      const llmResponse = await callWithLimit(async () => {
-        const completion = await openrouter.chat.completions.create({
-          model: MODEL,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a legal evidence analyst. Answer questions based only on provided case documents. Explicitly flag conflicts and uncertainty. Cite sources as [Source N].',
-            },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.1, // Low temperature for factual consistency
-          max_tokens: 2000,
-        });
-        return completion.choices[0]?.message?.content || 'No response from model';
-      });
+      const hasOpenRouterKey = Boolean(
+        process.env.OPENROUTER_API_KEY &&
+        !process.env.OPENROUTER_API_KEY.startsWith('your-'),
+      );
+      const llmResponse = hasOpenRouterKey
+        ? await callWithLimit(async () => {
+            const completion = await openrouter.chat.completions.create({
+              model: MODEL,
+              messages: [
+                {
+                  role: 'system',
+                  content: 'You are a legal evidence analyst. Answer questions based only on provided case documents. Explicitly flag conflicts and uncertainty. Cite sources as [Source N].',
+                },
+                { role: 'user', content: prompt },
+              ],
+              temperature: 0.1,
+              max_tokens: 2000,
+            });
+            return completion.choices[0]?.message?.content || 'No response from model';
+          })
+        : `Relevant case material:\n\n${chunks
+            .slice(0, 3)
+            .map((chunk, index) => `[Source ${index + 1}] ${chunk.content}`)
+            .join('\n\n')}`;
 
       // Parse LLM response for structured output
       const answer = {

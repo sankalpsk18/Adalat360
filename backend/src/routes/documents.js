@@ -13,6 +13,7 @@ import express from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import { prisma } from '../index.js';
 import { authenticate, requireRole, requireDocumentAccess, requireCaseAccess, auditLog } from '../middleware/rbac.js';
@@ -21,13 +22,14 @@ import { indexDocument } from '../services/embeddings.js';
 import { updateCasePriority } from '../utils/priority.js';
 
 const router = express.Router();
+const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const uploadRoot = path.resolve(backendRoot, process.env.UPLOAD_DIR || 'uploads');
 
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const uploadDir = process.env.UPLOAD_DIR || './uploads';
-    await fs.mkdir(uploadDir, { recursive: true });
-    cb(null, uploadDir);
+    await fs.mkdir(uploadRoot, { recursive: true });
+    cb(null, uploadRoot);
   },
   filename: (req, file, cb) => {
     // Store with UUID to avoid conflicts
@@ -145,7 +147,7 @@ router.post(
 
       // Save encrypted file
       const encFilename = `${fileHash}.enc`;
-      const encPath = path.join(process.env.UPLOAD_DIR || './uploads', encFilename);
+      const encPath = path.join(uploadRoot, encFilename);
       await fs.writeFile(encPath, encrypted);
 
       // Determine version number
@@ -251,7 +253,7 @@ router.get('/:id', authenticate, requireDocumentAccess, async (req, res, next) =
           include: { generator: { select: { name: true, role: true } } },
           orderBy: { issuedAt: 'desc' },
         },
-        _count: { select: { versions: true } },
+        _count: { select: { childVersions: true } },
       },
     });
 
@@ -362,6 +364,9 @@ router.get('/:id/download', authenticate, requireDocumentAccess, auditLog('downl
 
     // Decrypt
     const decrypted = decrypt(encrypted, iv, tag);
+    if (sha256(decrypted) !== document.sha256Hash) {
+      return res.status(409).json({ error: 'Document integrity verification failed' });
+    }
 
     // Create custody entry
     const prevHash = await getLastCustodyHash(document.caseId);

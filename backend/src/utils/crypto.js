@@ -9,6 +9,10 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // 96 bits for GCM
 const TAG_LENGTH = 16; // 128 bits
 const KEY_LENGTH = 32; // 256 bits
+const PLACEHOLDER_KEYS = new Set([
+  'your-32-byte-master-encryption-key-here-32c',
+  'change-me',
+]);
 
 /**
  * Get master encryption key from environment
@@ -18,6 +22,9 @@ function getMasterKey() {
   const key = process.env.MASTER_ENCRYPTION_KEY;
   if (!key) {
     throw new Error('MASTER_ENCRYPTION_KEY not set in environment');
+  }
+  if (process.env.NODE_ENV === 'production' && PLACEHOLDER_KEYS.has(key)) {
+    throw new Error('MASTER_ENCRYPTION_KEY must be replaced before production use');
   }
   // Ensure key is exactly 32 bytes
   return crypto.createHash('sha256').update(key).digest();
@@ -68,6 +75,10 @@ export function decrypt(encrypted, iv, tag) {
 export function sha256(data) {
   const dataBuffer = Buffer.isBuffer(data) ? data : Buffer.from(data, 'utf8');
   return crypto.createHash('sha256').update(dataBuffer).digest('hex');
+}
+
+export function assertEncryptionConfiguration() {
+  getMasterKey();
 }
 
 /**

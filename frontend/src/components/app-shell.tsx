@@ -20,7 +20,7 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/session";
-import { ROLES, roleMeta, useCases, useApprovals, type Role } from "@/lib/api";
+import { roleMeta, useCases, useApprovals, type Role } from "@/lib/api";
 import { DemoDataBadge, RoleBadge } from "@/components/primitives";
 import { Button } from "@/components/ui/button";
 import {
@@ -120,7 +120,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { role, setRole, activeCaseId, setActiveCaseId } = useSession();
+  const { role, activeCaseId, setActiveCaseId } = useSession();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const { data: cases = [] } = useCases(role);
@@ -177,18 +177,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="ml-auto flex items-center gap-2">
             <DemoDataBadge />
-            <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-              <SelectTrigger className="h-8 w-[168px] border-dashed text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLES.map((r) => (
-                  <SelectItem key={r.id} value={r.id} className="text-xs">
-                    Demo: {r.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Link
               to="/inbox"
               className="relative rounded-md border border-border p-1.5 transition-colors hover:border-ring"

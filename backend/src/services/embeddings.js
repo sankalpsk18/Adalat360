@@ -128,7 +128,7 @@ export async function searchCase(caseId, query, topK = 10) {
   // Get all chunks for the case
   const documents = await prisma.document.findMany({
     where: { caseId },
-    select: { id: true, title: true, caseId: true },
+    select: { id: true, filename: true, caseId: true },
   });
 
   const documentIds = documents.map(d => d.id);

@@ -1,0 +1,1 @@
+import{_ as e,y as t}from"./client-Bs3cP2BX.js";var n=t(e(),1),r=n.createContext(null);function i(e){return n.useContext(r)}export{r as n,i as t};

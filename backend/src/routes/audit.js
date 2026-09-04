@@ -86,7 +86,7 @@ router.get('/', authenticate, requireRole('SYS', 'IO', 'PP', 'CRT'), async (req,
  * GET /api/audit/:id
  * Get audit entry details
  */
-router.get('/:id', authenticate, requireRole('SYS', 'IO', 'PP', 'CRT'), async (req, res, next) => {
+const getAuditEntry = async (req, res, next) => {
   try {
     const log = await prisma.auditLog.findUnique({
       where: { id: req.params.id },
@@ -114,13 +114,13 @@ router.get('/:id', authenticate, requireRole('SYS', 'IO', 'PP', 'CRT'), async (r
   } catch (error) {
     next(error);
   }
-});
+};
 
 /**
  * GET /api/audit/stats
  * Get audit statistics for dashboard
  */
-router.get('/stats', authenticate, requireRole('SYS', 'IO', 'PP', 'CRT'), async (req, next) => {
+router.get('/stats', authenticate, requireRole('SYS', 'IO', 'PP', 'CRT'), async (req, res, next) => {
   try {
     const { caseId, days = '30' } = req.query;
     const since = new Date(Date.now() - parseInt(days) * 24 * 60 * 60 * 1000);
@@ -135,37 +135,26 @@ router.get('/stats', authenticate, requireRole('SYS', 'IO', 'PP', 'CRT'), async 
         where: { department: req.user.department },
         select: { id: true },
       });
+
       where.caseId = { in: cases.map(c => c.id) };
     }
 
-    const [totalLogs, actionCounts, actorCounts, dailyCounts] = await Promise.all([
-      prisma.auditLog.count({ where }),
-      prisma.auditLog.groupBy({
-        by: ['action'],
-        where,
-        _count: true,
-        orderBy: { _count: { action: 'desc' } },
-      }),
-      prisma.auditLog.groupBy({
-        by: ['actorId'],
-        where,
-        _count: true,
-        orderBy: { _count: { actorId: 'desc' } },
-        take: 10,
-      }),
-      prisma.$queryRaw`
-        SELECT DATE(timestamp) as date, COUNT(*) as count
-        FROM audit_logs
-        WHERE timestamp >= ${since}
-        ${caseId ? `AND case_id = '${caseId}'` : ''}
-        GROUP BY DATE(timestamp)
-        ORDER BY date DESC
-        LIMIT 30
-      `,
-    ]);
+    const logs = await prisma.auditLog.findMany({
+      where,
+      select: { action: true, actorId: true, timestamp: true },
+    });
+    const actionCounts = new Map();
+    const actorCounts = new Map();
+    const dailyCounts = new Map();
+    for (const log of logs) {
+      actionCounts.set(log.action, (actionCounts.get(log.action) || 0) + 1);
+      actorCounts.set(log.actorId, (actorCounts.get(log.actorId) || 0) + 1);
+      const date = log.timestamp.toISOString().slice(0, 10);
+      dailyCounts.set(date, (dailyCounts.get(date) || 0) + 1);
+    }
 
     // Get actor names for top actors
-    const actorIds = actorCounts.map(a => a.actorId);
+    const actorIds = [...actorCounts.keys()];
     const actors = await prisma.user.findMany({
       where: { id: { in: actorIds } },
       select: { id: true, name: true, role: true },
@@ -175,16 +164,21 @@ router.get('/stats', authenticate, requireRole('SYS', 'IO', 'PP', 'CRT'), async 
 
     res.json({
       stats: {
-        totalLogs,
-        actionBreakdown: actionCounts.map(a => ({
-          action: a.action,
-          count: a._count,
-        })),
-        topActors: actorCounts.map(a => ({
-          actor: actorMap.get(a.actorId) || { name: 'Unknown', role: 'Unknown' },
-          count: a._count,
-        })),
-        dailyActivity: dailyCounts,
+        totalLogs: logs.length,
+        actionBreakdown: [...actionCounts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([action, count]) => ({ action, count })),
+        topActors: [...actorCounts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+          .map(([actorId, count]) => ({
+            actor: actorMap.get(actorId) || { name: 'Unknown', role: 'Unknown' },
+            count,
+          })),
+        dailyActivity: [...dailyCounts.entries()]
+          .sort((a, b) => b[0].localeCompare(a[0]))
+          .slice(0, 30)
+          .map(([date, count]) => ({ date, count })),
       },
       demo: true,
     });
@@ -241,5 +235,7 @@ router.get('/export', authenticate, requireRole('SYS'), async (req, res, next) =
     next(error);
   }
 });
+
+router.get('/:id', authenticate, requireRole('SYS', 'IO', 'PP', 'CRT'), getAuditEntry);
 
 export default router;

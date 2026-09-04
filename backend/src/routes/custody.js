@@ -16,7 +16,7 @@ const router = express.Router();
  * GET /api/custody/:documentId
  * Get custody trail for a specific document
  */
-router.get('/:documentId', authenticate, requireDocumentAccess, async (req, res, next) => {
+const getDocumentCustody = async (req, res, next) => {
   try {
     const entries = await prisma.custodyEntry.findMany({
       where: { documentId: req.params.documentId },
@@ -62,14 +62,14 @@ router.get('/:documentId', authenticate, requireDocumentAccess, async (req, res,
   } catch (error) {
     next(error);
   }
-});
+};
 
 /**
  * GET /api/custody/:documentId/verify
  * Verify entire hash chain and report first broken link
  * This is what produces the "Hash mismatch on server disk image" alert
  */
-router.get('/:documentId/verify', authenticate, requireDocumentAccess, async (req, res, next) => {
+const verifyDocumentCustody = async (req, res, next) => {
   try {
     const entries = await prisma.custodyEntry.findMany({
       where: { documentId: req.params.documentId },
@@ -148,7 +148,7 @@ router.get('/:documentId/verify', authenticate, requireDocumentAccess, async (re
       await prisma.conflictAlert.create({
         data: {
           caseId: document.caseId,
-          documentIds: [req.params.documentId],
+          documentIds: JSON.stringify([req.params.documentId]),
           description: `Custody chain verification failed: ${brokenLink.reason} at position ${brokenLink.position}`,
           severity: 'CRITICAL',
         },
@@ -177,7 +177,7 @@ router.get('/:documentId/verify', authenticate, requireDocumentAccess, async (re
   } catch (error) {
     next(error);
   }
-});
+};
 
 /**
  * GET /api/custody/case/:caseId
@@ -300,5 +300,8 @@ router.get('/verify-all/:caseId', authenticate, requireCaseAccess, async (req, r
     next(error);
   }
 });
+
+router.get('/:documentId/verify', authenticate, requireDocumentAccess, verifyDocumentCustody);
+router.get('/:documentId', authenticate, requireDocumentAccess, getDocumentCustody);
 
 export default router;

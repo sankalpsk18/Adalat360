@@ -1,45 +1,48 @@
-/**
- * Real API Client for ADALAT360 Frontend
- * Connects to the Express backend at /api
- */
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-interface RequestOptions extends RequestInit {
-  params?: Record<string, string>;
+function getToken(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('adalat360_token');
+  }
+  return null;
 }
 
-async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const { params, headers, ...fetchOptions } = options;
-
-  // Build URL with query params
-  const url = new URL(`${API_BASE}${endpoint}`);
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        url.searchParams.append(key, value);
-      }
-    });
+export function setToken(token: string) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('adalat360_token', token);
   }
+}
 
-  // Get auth token from cookie or localStorage
-  const token = getAuthToken();
+export function clearToken() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('adalat360_token');
+  }
+}
 
-  const response = await fetch(url.toString(), {
-    ...fetchOptions,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...headers,
-    },
-    credentials: 'include', // Include cookies for JWT
+async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...(options.headers as Record<string, string>),
+  };
+
+  console.log('[API] Request:', endpoint, options.body);
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+    credentials: 'include',
   });
+
+  console.log('[API] Response:', response.status, response.statusText);
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    console.error('[API] Error:', error);
     throw new Error(error.error || `HTTP ${response.status}`);
   }
 
-  // Handle 204 No Content
   if (response.status === 204) {
     return undefined as T;
   }
@@ -47,27 +50,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   return response.json();
 }
 
-function getAuthToken(): string | null {
-  // Try to get from localStorage (set after login)
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('adalat360_token');
-  }
-  return null;
-}
-
-export function setAuthToken(token: string) {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('adalat360_token', token);
-  }
-}
-
-export function clearAuthToken() {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('adalat360_token');
-  }
-}
-
-// Auth API
+// Auth
 export const authApi = {
   login: (serviceBarId: string, passphrase: string, role: string) =>
     request<{ user: any; token: string; demo: boolean }>('/auth/login', {
@@ -88,10 +71,12 @@ export const authApi = {
     }),
 };
 
-// Cases API
+// Cases
 export const casesApi = {
   list: (params?: { status?: string; department?: string; limit?: string; offset?: string }) =>
-    request<{ cases: any[]; pagination: any; demo: boolean }>('/cases', { params }),
+    request<{ cases: any[]; pagination: any; demo: boolean }>('/cases', {
+      params,
+    }),
 
   get: (id: string) =>
     request<{ case: any; demo: boolean }>(`/cases/${id}`),
@@ -115,7 +100,7 @@ export const casesApi = {
     request<{ stats: any; demo: boolean }>(`/cases/${id}/stats`),
 };
 
-// Documents API
+// Documents
 export const documentsApi = {
   upload: (file: File, caseId: string, title?: string, docType?: string) => {
     const formData = new FormData();
@@ -124,7 +109,7 @@ export const documentsApi = {
     if (title) formData.append('title', title);
     if (docType) formData.append('docType', docType);
 
-    const token = getAuthToken();
+    const token = getToken();
     return fetch(`${API_BASE}/documents`, {
       method: 'POST',
       body: formData,
@@ -148,7 +133,7 @@ export const documentsApi = {
     request<{ versions: any[]; demo: boolean }>(`/documents/${id}/versions`),
 
   download: (id: string) => {
-    const token = getAuthToken();
+    const token = getToken();
     return fetch(`${API_BASE}/documents/${id}/download`, {
       headers: {
         ...(token && { Authorization: `Bearer ${token}` }),
@@ -172,7 +157,7 @@ export const documentsApi = {
     }),
 };
 
-// Custody API
+// Custody
 export const custodyApi = {
   get: (documentId: string) =>
     request<{ entries: any[]; demo: boolean }>(`/custody/${documentId}`),
@@ -187,7 +172,7 @@ export const custodyApi = {
     request<{ caseId: string; totalDocuments: number; verified: number; mismatched: number; results: any[]; demo: boolean }>(`/custody/verify-all/${caseId}`),
 };
 
-// Exhibits API
+// Exhibits
 export const exhibitsApi = {
   list: (params?: { caseId?: string; status?: string; category?: string; limit?: string; offset?: string }) =>
     request<{ exhibits: any[]; pagination: any; demo: boolean }>('/exhibits', { params }),
@@ -208,7 +193,7 @@ export const exhibitsApi = {
     }),
 };
 
-// Signatures API
+// Signatures
 export const signaturesApi = {
   signDocument: (id: string) =>
     request<{ signature: any; demo: boolean }>(`/signatures/document/${id}`, {
@@ -233,7 +218,7 @@ export const signaturesApi = {
     }),
 };
 
-// Certificates API
+// Certificates
 export const certificatesApi = {
   generate: (documentId: string) =>
     request<{ certificate: any; demo: boolean }>(`/certificates/document/${documentId}`, {
@@ -252,7 +237,7 @@ export const certificatesApi = {
     }),
 };
 
-// Redactions API
+// Redactions
 export const redactionsApi = {
   create: (documentId: string, regions: { x: number; y: number; width: number; height: number; page: number }[], reason: string) =>
     request<{ redaction: any; newDocumentVersion: any; demo: boolean }>(`/redactions/document/${documentId}`, {
@@ -267,7 +252,7 @@ export const redactionsApi = {
     request<{ redaction: any; demo: boolean }>(`/redactions/${id}`),
 };
 
-// Approvals API
+// Approvals
 export const approvalsApi = {
   list: (params?: { status?: string; limit?: string; offset?: string }) =>
     request<{ approvals: any[]; pagination: any; demo: boolean }>('/approvals', { params }),
@@ -288,7 +273,7 @@ export const approvalsApi = {
     }),
 };
 
-// Audit API
+// Audit
 export const auditApi = {
   list: (params?: { actorId?: string; action?: string; resourceType?: string; caseId?: string; startDate?: string; endDate?: string; limit?: string; offset?: string }) =>
     request<{ logs: any[]; pagination: any; demo: boolean }>('/audit', { params }),
@@ -300,7 +285,7 @@ export const auditApi = {
     request<{ stats: any; demo: boolean }>('/audit/stats', { params }),
 
   export: (params?: { caseId?: string; startDate?: string; endDate?: string }) => {
-    const token = getAuthToken();
+    const token = getToken();
     const url = new URL(`${API_BASE}/audit/export`);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -316,7 +301,7 @@ export const auditApi = {
   },
 };
 
-// RAG API (Conflict-aware Ask)
+// RAG (Conflict-aware Ask)
 export const ragApi = {
   ask: (caseId: string, question: string, useCache = true) =>
     request<{ answer: any; cached: boolean; chunksRetrieved: number; conflictsDetected: number; demo: boolean }>(`/rag/cases/${caseId}/ask`, {
@@ -336,7 +321,7 @@ export const ragApi = {
     request<{ usage: any; demo: boolean }>('/rag/usage'),
 };
 
-// System API
+// System
 export const systemApi = {
   health: () =>
     request<{ status: string; timestamp: string; service: string; version: string; demo: boolean }>('/system/health'),
@@ -356,5 +341,38 @@ export const systemApi = {
     request<{ caseId: string; totalDocuments: number; verified: number; mismatched: number; results: any[]; demo: boolean }>(`/system/integrity-check/${caseId}`),
 };
 
-// Re-export types from types.ts for backward compatibility
-export * from './types';
+// Types
+export type Role =
+  | 'investigating_officer'
+  | 'records_section'
+  | 'forensic_analyst'
+  | 'prosecutor'
+  | 'judge'
+  | 'system_admin';
+
+export interface RoleMeta {
+  id: Role;
+  label: string;
+  short: string;
+  access: string;
+}
+
+export const ROLES: RoleMeta[] = [
+  { id: 'investigating_officer', label: 'Investigating Officer', short: 'IO', access: 'Assigned case files and permitted documents/evidence' },
+  { id: 'records_section', label: 'Records / Administrative Section', short: 'REC', access: 'Intake, indexing and metadata correction for assigned cases' },
+  { id: 'forensic_analyst', label: 'Forensic Analyst', short: 'FSL', access: 'Evidence assigned for examination + relevant case context' },
+  { id: 'prosecutor', label: 'Prosecutor / Legal Cell', short: 'PP', access: 'Approved prosecution material, charge sheets, authorized filings' },
+  { id: 'judge', label: 'Judge / Court Officer', short: 'CRT', access: 'Records formally shared through an authorized court workflow' },
+  { id: 'system_admin', label: 'System Administrator', short: 'SYS', access: 'Technical administration only — document content stays restricted' },
+];
+
+export const roleMeta = (r: Role) => ROLES.find((x) => x.id === r)!;
+
+export const DEMO_CREDENTIALS: Record<Role, { serviceBarId: string; passphrase: string }> = {
+  investigating_officer: { serviceBarId: 'IO-CB-2026-001', passphrase: 'demo123' },
+  records_section: { serviceBarId: 'REC-RS-2026-001', passphrase: 'demo123' },
+  forensic_analyst: { serviceBarId: 'FSL-RFSL-2026-001', passphrase: 'demo123' },
+  prosecutor: { serviceBarId: 'PP-LC-2026-001', passphrase: 'demo123' },
+  judge: { serviceBarId: 'CRT-DC-2026-001', passphrase: 'demo123' },
+  system_admin: { serviceBarId: 'SYS-IT-2026-001', passphrase: 'demo123' },
+};
