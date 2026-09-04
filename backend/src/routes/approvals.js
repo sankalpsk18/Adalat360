@@ -59,7 +59,6 @@ router.get('/', authenticate, async (req, res, next) => {
           requester: { select: { id: true, name: true, role: true, department: true } },
           reviewer: { select: { id: true, name: true, role: true } },
           case: { select: { id: true, caseNumber: true, title: true } },
-          document: { select: { id: true, filename: true, docType: true } },
         },
       }),
       prisma.approvalRequest.count({ where }),

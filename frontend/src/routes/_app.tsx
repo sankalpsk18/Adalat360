@@ -12,12 +12,22 @@ function AppLayout() {
   const { signedIn } = useSession();
   const navigate = useNavigate();
 
+  console.log('[AppLayout] signedIn:', signedIn);
+
   useEffect(() => {
-    if (!signedIn) navigate({ to: "/", replace: true });
+    console.log('[AppLayout] useEffect signedIn:', signedIn);
+    if (!signedIn) {
+      console.log('[AppLayout] Redirecting to /');
+      navigate({ to: "/", replace: true });
+    }
   }, [signedIn, navigate]);
 
-  if (!signedIn) return null;
+  if (!signedIn) {
+    console.log('[AppLayout] Returning null (not signed in)');
+    return null;
+  }
 
+  console.log('[AppLayout] Rendering AppShell');
   return (
     <AppShell>
       <Outlet />

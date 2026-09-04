@@ -130,7 +130,6 @@ router.get('/:id', authenticate, requireCaseAccess, async (req, res, next) => {
             signedBy: true,
             docType: true,
             uploadedAt: true,
-            _count: { select: { versions: true } },
           },
         },
         exhibits: {

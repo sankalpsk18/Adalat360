@@ -80,6 +80,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (selectedRole: Role, serviceBarId: string, passphrase: string) => {
     try {
+      console.log('[Session] Starting signIn for:', serviceBarId, selectedRole);
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -87,22 +88,28 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ serviceBarId, passphrase, role: selectedRole }),
       });
 
+      console.log('[Session] Response status:', response.status);
+
       if (!response.ok) {
         const error = await response.json();
+        console.error('[Session] Login failed:', error);
         throw new Error(error.error || 'Login failed');
       }
 
       const data = await response.json();
+      console.log('[Session] Login success, data:', data);
 
       if (data.token) {
         signInUser(data.token);
+        console.log('[Session] Token stored in localStorage');
       }
 
       setUser(data.user);
       setRoleState(selectedRole);
       setSignedIn(true);
+      console.log('[Session] State updated, signedIn:', true);
     } catch (error) {
-      console.error('Sign in failed:', error);
+      console.error('[Session] Sign in failed:', error);
       throw error;
     }
   };

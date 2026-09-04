@@ -58,12 +58,16 @@ function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    console.log('[Login] Submitting login for:', serviceBarId, role);
 
     try {
       await signIn(role, serviceBarId, passphrase);
+      console.log('[Login] signIn completed, navigating to /dashboard');
       toast.success(`Signed in as ${ROLES.find(r => r.id === role)?.label}`);
       navigate({ to: '/dashboard' });
+      console.log('[Login] Navigation triggered');
     } catch (error: any) {
+      console.error('[Login] Error:', error);
       toast.error(error.message || 'Sign in failed');
     } finally {
       setIsLoading(false);

@@ -77,11 +77,23 @@ export function useAudit() {
 // ============================================
 // CASES - Connect to real backend
 // ============================================
+const roleToBackendRole: Record<string, string> = {
+  investigating_officer: 'IO',
+  records_section: 'REC',
+  forensic_analyst: 'FSL',
+  prosecutor: 'PP',
+  judge: 'CRT',
+  system_admin: 'SYS',
+};
+
 export async function listCases(role: Role): Promise<any[]> {
   try {
     const response = await casesApi.list();
-    // Filter by role visibility on client side (or backend handles it)
-    return response.cases.filter((c: any) => c.visibleTo?.includes(role) || role === 'system_admin');
+    const backendRole = roleToBackendRole[role] || 'IO';
+    // Filter by checking if user's role is in the case's officers
+    return response.cases.filter((c: any) =>
+      c.officers?.some((o: any) => o.role === backendRole) || role === 'system_admin'
+    );
   } catch (error) {
     console.error('Failed to fetch cases:', error);
     // Fallback to mock data for development
@@ -140,15 +152,36 @@ export async function getDocument(id: string): Promise<any | undefined> {
 // ============================================
 // CUSTODY - Connect to real backend
 // ============================================
+const mapBackendRoleToFrontend = (backendRole: string): string => {
+  const roleMap: Record<string, string> = {
+    IO: 'investigating_officer',
+    REC: 'records_section',
+    FSL: 'forensic_analyst',
+    PP: 'prosecutor',
+    CRT: 'judge',
+    SYS: 'system_admin',
+  };
+  return roleMap[backendRole] || 'investigating_officer';
+};
+
 export async function listCustody(filter?: { caseId?: string; targetId?: string }) {
   try {
     if (filter?.targetId) {
       const response = await custodyApi.get(filter.targetId);
-      return response.entries;
+      // Transform backend roles to frontend roles
+      return response.entries.map((entry: any) => ({
+        ...entry,
+        actorRole: mapBackendRoleToFrontend(entry.actor?.role),
+        actor: entry.actor?.name || entry.actorId,
+      }));
     }
     if (filter?.caseId) {
       const response = await custodyApi.caseEntries(filter.caseId);
-      return response.entries;
+      return response.entries.map((entry: any) => ({
+        ...entry,
+        actorRole: mapBackendRoleToFrontend(entry.actor?.role),
+        actor: entry.actor?.name || entry.actorId,
+      }));
     }
     return [];
   } catch (error) {
@@ -204,10 +237,33 @@ export async function listApprovals() {
 // ============================================
 // AUDIT - Connect to real backend
 // ============================================
+const mapBackendRoleToFrontend = (backendRole: string): string => {
+  const roleMap: Record<string, string> = {
+    IO: 'investigating_officer',
+    REC: 'records_section',
+    FSL: 'forensic_analyst',
+    PP: 'prosecutor',
+    CRT: 'judge',
+    SYS: 'system_admin',
+  };
+  return roleMap[backendRole] || 'investigating_officer';
+};
+
 export async function listAudit() {
   try {
     const response = await auditApi.list({ limit: '50' });
-    return [...response.logs].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    // Transform backend response to match frontend type
+    const transformed = response.logs.map((log: any) => ({
+      id: log.id,
+      actor: log.actor?.name || log.actorId,
+      actorRole: mapBackendRoleToFrontend(log.actor?.role) || 'investigating_officer',
+      action: log.action,
+      target: log.resourceId,
+      caseId: log.caseId || '—',
+      timestamp: log.timestamp,
+      ip: log.ip || '—',
+    }));
+    return [...transformed].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   } catch (error) {
     console.error('Failed to fetch audit:', error);
     const { AUDIT } = await import('./seed');

@@ -20,7 +20,7 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/session";
-import { listApprovals, listCases, ROLES, roleMeta, type Role } from "@/lib/api";
+import { ROLES, roleMeta, useCases, useApprovals, type Role } from "@/lib/api";
 import { DemoDataBadge, RoleBadge } from "@/components/primitives";
 import { Button } from "@/components/ui/button";
 import {
@@ -123,8 +123,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { role, setRole, activeCaseId, setActiveCaseId } = useSession();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const cases = listCases(role);
-  const pending = listApprovals().filter((a) => a.status === "pending").length;
+  const { data: cases = [] } = useCases(role);
+  const { data: approvals = [] } = useApprovals();
+  const pending = approvals.filter((a) => a.status === "pending").length;
 
   return (
     <div className="flex min-h-screen bg-background">

@@ -60,6 +60,10 @@ export function IntegrityBadge({ state, className }: { state: IntegrityState; cl
 
 export function RoleBadge({ role, className }: { role: Role; className?: string }) {
   const m = roleMeta(role);
+  if (!m) {
+    console.warn('[RoleBadge] Unknown role:', role);
+    return <span className={cn("data-mono inline-flex items-center rounded-sm border border-border bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground", className)}>{role}</span>;
+  }
   return (
     <span
       title={m.label}
