@@ -46,7 +46,10 @@ router.get('/', authenticate, async (req, res, next) => {
 
     // System admins see all cases (but only metadata)
     if (req.user.role !== 'SYS') {
-      where.department = req.user.department;
+      where.OR = [
+        { department: req.user.department },
+        { officers: { some: { id: req.user.id } } }
+      ];
     }
 
     // Filter by status if provided

@@ -105,7 +105,14 @@ export async function requireCaseAccess(req, res, next) {
 
   const caseRecord = await prisma.case.findUnique({
     where: { id: caseId },
-    select: { id: true, department: true },
+    select: {
+      id: true,
+      department: true,
+      officers: {
+        where: { id: req.user.id },
+        select: { id: true }
+      }
+    },
   });
 
   if (!caseRecord) {
@@ -118,10 +125,12 @@ export async function requireCaseAccess(req, res, next) {
     return next();
   }
 
-  // Check department match
-  if (req.user.department !== caseRecord.department) {
+  const isAssigned = caseRecord.officers && caseRecord.officers.length > 0;
+
+  // Check department match or explicit officer assignment
+  if (req.user.department !== caseRecord.department && !isAssigned) {
     return res.status(403).json({
-      error: 'Access denied: case belongs to different department',
+      error: 'Access denied: case belongs to different department and you are not assigned',
       userDepartment: req.user.department,
       caseDepartment: caseRecord.department,
     });
@@ -142,7 +151,20 @@ export async function requireDocumentAccess(req, res, next) {
 
   const document = await prisma.document.findUnique({
     where: { id: documentId },
-    select: { id: true, caseId: true, restricted: true, department: true },
+    select: {
+      id: true,
+      caseId: true,
+      restricted: true,
+      department: true,
+      case: {
+        select: {
+          officers: {
+            where: { id: req.user.id },
+            select: { id: true }
+          }
+        }
+      }
+    },
   });
 
   if (!document) {
@@ -155,10 +177,12 @@ export async function requireDocumentAccess(req, res, next) {
     return next();
   }
 
-  // Check department match
-  if (req.user.department !== document.department) {
+  const isAssigned = document.case?.officers && document.case.officers.length > 0;
+
+  // Check department match or explicit officer assignment to parent case
+  if (req.user.department !== document.department && !isAssigned) {
     return res.status(403).json({
-      error: 'Access denied: document belongs to different department',
+      error: 'Access denied: document belongs to different department and you are not assigned to the parent case',
     });
   }
 

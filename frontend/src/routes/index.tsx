@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Landmark, Lock, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
-import { useAuth, ROLES, type Role } from '@/lib';
+import { useAuth, ROLES, type Role, DEMO_CREDENTIALS } from '@/lib';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,14 +30,14 @@ function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [role, setRole] = useState<Role>('investigating_officer');
-  const [serviceBarId, setServiceBarId] = useState('');
-  const [passphrase, setPassphrase] = useState('');
+  const [serviceBarId, setServiceBarId] = useState(DEMO_CREDENTIALS['investigating_officer'].serviceBarId);
+  const [passphrase, setPassphrase] = useState(DEMO_CREDENTIALS['investigating_officer'].passphrase);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRoleChange = (newRole: Role) => {
     setRole(newRole);
-    setServiceBarId('');
-    setPassphrase('');
+    setServiceBarId(DEMO_CREDENTIALS[newRole].serviceBarId);
+    setPassphrase(DEMO_CREDENTIALS[newRole].passphrase);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
